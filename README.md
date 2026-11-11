@@ -40,6 +40,17 @@ Only the site's own pages may call it from a browser (`https://adgnvtefc.github.
 
 Pages on localhost use the local post office. The published site uses `https://hanmos-mac-studio.tail6c4683.ts.net/loveletter` (Tailscale Funnel → 127.0.0.1:8792).
 
+## Stats
+
+The post office reports to [catseye](https://github.com/adgnvtefc/catseye) (site `loveletter`) in the background, so catseye being down never affects a letter. The pages send nothing.
+
+| Event | When | Data |
+|---|---|---|
+| `letter_sealed` | a new letter is stored | `kb` |
+| `letter_opened` | someone gives the right name + password | `kb`, `hours_waiting` since it was sealed, `first` open or not |
+
+No names, ids or contents are sent. Requests from a localhost page are marked local, so catseye leaves them out. The tile is in monitor-hub (`web/sites/loveletter/`).
+
 ## Always on
 
 ```sh
