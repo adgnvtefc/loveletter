@@ -1,0 +1,10 @@
+{
+  "name": "loveletter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "site": "python3 -m http.server 4180",
+    "server": "node server/server.js",
+    "test": "node --test server/"
+  }
+}

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#fde8dc">
+  <title>write a letter · loveletter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <script type="module" src="creator.js"></script>
+</head>
+<body>
+  <main class="sheet">
+    <header class="creator-head">
+      <div id="logo" class="logo"></div>
+      <h1>write a letter</h1>
+      <p>seal it with a password, then tell them where to find it.</p>
+    </header>
+
+    <form id="write" class="box card" autocomplete="off">
+      <label>your name
+        <input id="sender" required maxlength="40" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="how they know you">
+      </label>
+      <label>password
+        <input id="password" required maxlength="60" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="something only they'd know">
+      </label>
+      <div class="field">
+        <span>photos <span class="soft">(up to 4)</span></span>
+        <div id="thumbs" class="thumbs"></div>
+        <label class="btn ghost add">
+          <input id="pick" class="visually-hidden" type="file" accept="image/*" multiple>+ add photos
+        </label>
+      </div>
+      <label>your letter
+        <textarea id="message" rows="8" maxlength="4000" placeholder="dear you,"></textarea>
+      </label>
+      <p id="error" class="error" role="alert"></p>
+      <button id="seal" class="btn">seal it ♥</button>
+    </form>
+
+    <section id="sealed" class="box card sealed" hidden>
+      <div id="sealedEnv" class="logo"></div>
+      <h2>sealed!</h2>
+      <p>tell them to go to</p>
+      <p><a id="link"></a></p>
+      <p>and give the postman these:</p>
+      <dl>
+        <dt>from</dt><dd id="outSender"></dd>
+        <dt>password</dt><dd id="outPassword"></dd>
+      </dl>
+      <button id="copy" class="btn" type="button">copy all</button>
+      <button id="another" class="btn ghost" type="button">write another</button>
+    </section>
+
+    <p class="back"><a href="../">← back to the door</a></p>
+  </main>
+</body>
+</html>
