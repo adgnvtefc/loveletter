@@ -191,9 +191,10 @@ test('backfill puts old letters on both shelves, once', async () => {
   createAccount(db, 'bob', 'pw two');
   db.prepare('INSERT INTO letters (id, blob, sealed_at) VALUES (?, ?, ?)').run(ID, Buffer.from([1]), 1000);
   const entries = [{ letter_id: ID, sender: 'billy', reader: 'Bob', sealed_at: 1000, first_opened_at: 5000 }];
-  assert.equal(backfill(db, entries), 1);
-  backfill(db, entries);
-  assert.throws(() => backfill(db, [{ ...entries[0], sender: 'carol' }]), /carol/);
+  assert.deepEqual(backfill(db, entries), { shelved: 2, waiting: [] });
+  assert.deepEqual(backfill(db, entries), { shelved: 0, waiting: [] });   // again: nothing twice
+  assert.deepEqual(backfill(db, [{ ...entries[0], reader: 'Carol' }]), { shelved: 0, waiting: ['carol'] });
+  assert.throws(() => backfill(db, [{ ...entries[0], letter_id: 'ef'.repeat(16) }]), /no letter/);
   await withServer(async base => {
     const billy = await signInAs(base, 'billy', 'pw one'), bob = await signInAs(base, 'bob', 'pw two');
     assert.deepEqual((await shelfOf(base, billy)).sent.map(l => [l.id, l.sealed_at, l.opened, l.key]), [[ID, 1000, true, null]]);

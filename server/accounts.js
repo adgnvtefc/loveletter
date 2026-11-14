@@ -118,24 +118,26 @@ export function signOut(db, token) {
 
 // Letters sealed before accounts: [{ letter_id, sender, reader, sealed_at, first_opened_at }].
 // Puts each on its sender's and reader's shelves with no key yet; each becomes tap-to-read
-// once that person opens it signed in. Safe to run twice.
+// once that person opens it signed in. Someone without an account yet is skipped, so it can
+// be run again later; running it twice never adds anything twice.
+// → { shelved: rows added now, waiting: names that have no account yet }
 export function backfill(db, entries) {
-  const id = name => {
-    const row = db.prepare('SELECT id FROM accounts WHERE name = ?').get(normalizeName(name));
-    if (!row) throw new Error(`make the account "${name}" first`);
-    return row.id;
-  };
+  const account = name => db.prepare('SELECT id FROM accounts WHERE name = ?').get(normalizeName(name))?.id;
   const hasLetter = db.prepare('SELECT 1 FROM letters WHERE id = ?');
   const opened = db.prepare('UPDATE letters SET first_opened_at = coalesce(first_opened_at, ?) WHERE id = ?');
   const shelve = db.prepare('INSERT OR IGNORE INTO shelf (account_id, letter_id, role, locked_key, first_at, last_at) VALUES (?, ?, ?, NULL, ?, ?)');
+  const waiting = new Set();
+  let shelved = 0;
   db.exec('BEGIN');
   try {
     for (const e of entries) {
       if (!hasLetter.get(e.letter_id)) throw new Error(`no letter ${e.letter_id.slice(0, 8)}`);
-      shelve.run(id(e.sender), e.letter_id, 'sent', e.sealed_at, e.sealed_at);
-      if (e.first_opened_at) {
-        opened.run(e.first_opened_at, e.letter_id);
-        shelve.run(id(e.reader), e.letter_id, 'opened', e.first_opened_at, e.first_opened_at);
+      if (e.first_opened_at) opened.run(e.first_opened_at, e.letter_id);
+      const sides = [[e.sender, 'sent', e.sealed_at], ...(e.first_opened_at ? [[e.reader, 'opened', e.first_opened_at]] : [])];
+      for (const [name, role, at] of sides) {
+        const id = account(name);
+        if (id) shelved += Number(shelve.run(id, e.letter_id, role, at, at).changes);
+        else waiting.add(normalizeName(name));
       }
     }
     db.exec('COMMIT');
@@ -143,7 +145,7 @@ export function backfill(db, entries) {
     db.exec('ROLLBACK');
     throw err;
   }
-  return entries.length;
+  return { shelved, waiting: [...waiting] };
 }
 
 // ---------- on the Mac ----------
@@ -199,9 +201,10 @@ if (import.meta.main) {
       for (const i of db.prepare('SELECT name, created_at FROM invites ORDER BY created_at').all())
         console.log(`${i.name}  invited ${new Date(i.created_at).toLocaleString()}  (no account yet)`);
     } else if (command === 'backfill' && arg && existsSync(arg)) {
-      console.log(`shelved ${backfill(db, JSON.parse(readFileSync(arg, 'utf8')))} letters`);
-      unlinkSync(arg);
-      console.log(`deleted ${arg}`);
+      const { shelved, waiting } = backfill(db, JSON.parse(readFileSync(arg, 'utf8')));
+      console.log(`put ${shelved} letters on shelves`);
+      if (waiting.length) console.log(`waiting for ${waiting.join(', ')} to have an account; run this again then (kept ${arg})`);
+      else { unlinkSync(arg); console.log(`all done; deleted ${arg}`); }
     } else {
       console.log('usage: node server/accounts.js add <name> | password <name> | invite <name> | uninvite <name> | list | backfill <file>');
       process.exitCode = 1;
