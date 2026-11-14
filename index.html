@@ -51,6 +51,21 @@
     </section>
 
     <div id="lightbox" class="lightbox" role="dialog" aria-label="photo" hidden><img id="lightboxImg" alt=""></div>
+
+    <!-- temporary: see invite.js -->
+    <section id="invite" class="invite" role="dialog" aria-label="make your account" hidden>
+      <form id="inviteForm" class="box invite-card" autocomplete="off">
+        <button id="inviteClose" class="invite-close" type="button" aria-label="close">×</button>
+        <p id="inviteText" class="invite-text">know you should have an account? enter the right username and choose a password. if you are who you are supposed to be, account will be created!</p>
+        <div id="inviteFields" class="invite-fields">
+          <label>username <input id="inviteName" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="username"></label>
+          <label>password <input id="invitePassword" type="password" autocomplete="new-password"></label>
+          <label>password again <input id="invitePassword2" type="password" autocomplete="new-password"></label>
+          <p id="inviteError" class="error" role="alert"></p>
+          <button id="inviteGo" class="btn">create my account ♥</button>
+        </div>
+      </form>
+    </section>
   </main>
 </body>
 </html>

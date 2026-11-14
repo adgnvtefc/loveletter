@@ -123,6 +123,20 @@ input:focus, textarea:focus { background: #fff2f5; }
 .fin { display: grid; gap: 16px; justify-items: center; margin-top: 36px; color: var(--soft); animation: rise-in .7s .8s both; }
 .fin p { margin: 0; }
 
+/* temporary invite pop-up (invite.js) */
+.invite {
+  position: absolute; inset: 0; z-index: 6; display: grid; place-items: center; padding: 20px;
+  background: rgba(58, 36, 64, .45); animation: fade .2s both;
+}
+.invite-card { position: relative; display: grid; gap: 16px; width: 100%; max-width: 400px; padding: 22px 20px 20px; }
+.invite-text { margin: 0 26px 0 0; font-size: 18px; line-height: 1.35; }
+.invite-fields { display: grid; gap: 12px; }
+.invite-fields .btn { justify-self: end; }
+.invite-close {
+  position: absolute; top: 6px; right: 8px; width: 32px; height: 32px; padding: 0;
+  border: 0; background: none; font-size: 24px; line-height: 1; color: var(--ink); cursor: pointer;
+}
+
 /* ---------- the creator page ---------- */
 
 .sheet { max-width: 480px; margin: 0 auto; padding: calc(28px + env(safe-area-inset-top)) 22px 60px; }

@@ -8,10 +8,12 @@
 
 const enc = new TextEncoder(), dec = new TextDecoder();
 
-// The post office: the local server while developing, the Mac through Tailscale Funnel otherwise.
-const POST_OFFICE = ['localhost', '127.0.0.1'].includes(location.hostname)
-  ? 'http://localhost:8792'
-  : 'https://hanmos-mac-studio.tail6c4683.ts.net/loveletter';
+// The post office: the Mac through Tailscale Funnel, or the local one while developing.
+// On localhost, `?office=8793` points at a throwaway post office on that port instead (for testing).
+const local = ['localhost', '127.0.0.1'].includes(location.hostname);
+const testPort = new URLSearchParams(location.search).get('office');
+export const POST_OFFICE = !local ? 'https://hanmos-mac-studio.tail6c4683.ts.net/loveletter'
+  : `http://localhost:${/^\d{4,5}$/.test(testPort ?? '') ? testPort : 8792}`;
 
 // "  Billy " and "billy" are the same sender; passwords ignore case and extra spaces too,
 // because phones love to capitalise the first letter.

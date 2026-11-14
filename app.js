@@ -7,6 +7,7 @@
 import { createScene, envelopeCanvas, scissorsCanvas, patternURL, ENV_W, ENV_H, CUT_ROW } from './scene.js';
 import { openLetter } from './store.js';
 import { demoLetter } from './demo.js';
+import { invitePopup } from './invite.js';
 
 const $ = id => document.getElementById(id);
 const stage = $('stage'), contents = $('contents'), wrap = $('envWrap');
@@ -44,6 +45,7 @@ async function tapToContinue() {
 
 async function greet() {
   scene.start();
+  await invitePopup();   // temporary; the postman waits until it's closed
   await scene.walkIn(reduce ? 0 : 4800);
   await wait(250);
   $('dialog').hidden = false;
