@@ -130,8 +130,8 @@ $('write').addEventListener('submit', async e => {
   if (problem) return showError(problem);
 
   const link = letterLink(new URL(`../${location.search}`, location).href, sealed.id, sealed.keyBytes);
-  $('sendText').textContent = 'Hi! You have a letter! You can click on the link to view, or enter the username and password.'
-    + `\n\n${link}\n\nusername: ${sender}\npassword: ${password}`;
+  $('sendText').textContent = 'Hi! You have a letter! You can click on the link to view, or enter the "from" and password.'
+    + `\n\n${link}\n\nfrom: ${sender}\npassword: ${password}`;
   $('onShelf').hidden = !signedInAs();
   $('write').hidden = true;
   $('sealed').hidden = false;
@@ -139,7 +139,7 @@ $('write').addEventListener('submit', async e => {
 });
 
 // The message: the link opens the letter with no name or password (its key rides after the #,
-// which browsers never send); the username + password open it through the postman instead.
+// which browsers never send); the "from" + password open it through the postman instead.
 // On phones, send opens the share sheet; elsewhere it copies the message.
 $('send').addEventListener('click', async () => {
   const text = $('sendText').textContent;
