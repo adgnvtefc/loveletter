@@ -24,36 +24,44 @@ async function derive(sender, password) {
   const bits = new Uint8Array(await crypto.subtle.deriveBits(
     { name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode('loveletter v1'), iterations: 150000 }, secret, 512));
   const id = [...bits.slice(0, 16)].map(b => b.toString(16).padStart(2, '0')).join('');
-  const key = await crypto.subtle.importKey('raw', bits.slice(32), 'AES-GCM', false, ['encrypt', 'decrypt']);
-  return { id, key };
+  const keyBytes = bits.slice(32);   // kept so a signed-in browser can lock it onto its shelf
+  const key = await crypto.subtle.importKey('raw', keyBytes, 'AES-GCM', false, ['encrypt', 'decrypt']);
+  return { id, key, keyBytes };
+}
+
+// Unseal a letter's bytes with its raw key → the letter, or null if the key doesn't fit.
+export async function unseal(blob, keyBytes) {
+  try {
+    const key = await crypto.subtle.importKey('raw', keyBytes, 'AES-GCM', false, ['decrypt']);
+    return JSON.parse(dec.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: blob.slice(0, 12) }, key, blob.slice(12))));
+  } catch {
+    return null;
+  }
 }
 
 // Network failures throw; callers say the post office is closed.
 const STATUS = { 201: 'ok', 409: 'taken', 413: 'too-big', 429: 'busy', 507: 'full' };
 
-// letter: { sender, password, message, photos: [data URLs] } → 'ok' | 'taken' | 'too-big' | 'busy' | 'full' | 'error'
-export async function sealLetter({ sender, password, message, photos }) {
-  const { id, key } = await derive(sender, password);
+// letter: { sender, password, message, photos: [data URLs] }; `headers` carries a sign-in, if any.
+// → { status: 'ok' | 'taken' | 'too-big' | 'busy' | 'full' | 'error', id, keyBytes }
+export async function sealLetter({ sender, password, message, photos }, headers = {}) {
+  const { id, key, keyBytes } = await derive(sender, password);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const body = enc.encode(JSON.stringify({ v: 1, sender: sender.trim(), message, photos, sealedAt: new Date().toISOString() }));
   const sealed = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, body));
   const blob = new Uint8Array(iv.length + sealed.length);
   blob.set(iv); blob.set(sealed, iv.length);
-  const res = await fetch(`${POST_OFFICE}/v1/letters/${id}`, { method: 'PUT', body: blob, headers: { 'content-type': 'application/octet-stream' } });
-  return STATUS[res.status] ?? 'error';
+  const res = await fetch(`${POST_OFFICE}/v1/letters/${id}`, { method: 'PUT', body: blob, headers: { 'content-type': 'application/octet-stream', ...headers } });
+  return { status: STATUS[res.status] ?? 'error', id, keyBytes };
 }
 
-// → { sender, message, photos, sealedAt }, or null when nothing matches
-export async function openLetter(sender, password) {
-  const { id, key } = await derive(sender, password);
-  const res = await fetch(`${POST_OFFICE}/v1/letters/${id}`);
+// → { letter: { sender, message, photos, sealedAt }, id, keyBytes }, or null when nothing matches.
+// `headers` carries a sign-in, if any, so the post office can put it on your shelf.
+export async function openLetter(sender, password, headers = {}) {
+  const { id, keyBytes } = await derive(sender, password);
+  const res = await fetch(`${POST_OFFICE}/v1/letters/${id}`, { headers });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`post office said ${res.status}`);
-  const blob = new Uint8Array(await res.arrayBuffer());
-  try {
-    const body = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: blob.slice(0, 12) }, key, blob.slice(12));
-    return JSON.parse(dec.decode(body));
-  } catch {
-    return null;
-  }
+  const letter = await unseal(new Uint8Array(await res.arrayBuffer()), keyBytes);
+  return letter && { letter, id, keyBytes };
 }

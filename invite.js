@@ -32,7 +32,7 @@ export async function invitePopup() {
       if (result === 'busy') return error('too many tries just now. wait a few minutes?');
       if (result === 'closed') return error("couldn't reach the post office. try again in a bit?");
       $('inviteFields').hidden = true;
-      $('inviteText').textContent = `account made ♥ welcome, ${name.trim().toLowerCase()}! remember your password: signing in arrives here soon.`;
+      $('inviteText').textContent = `account made ♥ welcome, ${name.trim().toLowerCase()}! you're signed in. tap your name at the top left any time to see your letters.`;
       $('inviteClose').focus();
     });
   });

@@ -112,5 +112,5 @@ sequenceDiagram
 
 1. **Post office** (accounts, sessions, shelves, backfill, the `server/accounts.js` command): built 2026-11-14. The database was backed up first, to `~/.loveletter/backups/letters-before-accounts.db`.
 2. Argon2id for new letters.
-3. Pages: sign-in button, "my letters", tap to re-read.
+3. **Pages** (sign-in button top left on both pages, "my letters", tap to re-read through the postman): built 2026-11-14, ahead of step 2. Each shelf entry locks the letter's key plus a small peek (who it's from, its first line, how many photos), so the lists show more than dates; the server still can't read any of it.
 4. Content-Security-Policy. Each goes on both shelves with no key yet (`locked_key` null), so it shows in both lists right away and becomes tap-to-read once that person opens it signed in. `first_opened_at` comes from catseye's `letter_opened` events (`first: true`), matched by size and time.

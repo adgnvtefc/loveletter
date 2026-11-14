@@ -133,7 +133,7 @@ test('shelves: sent and opened, own opens ignored, tap to re-read', async () => 
     // billy checks his own letter: still unopened, and not on his "opened" shelf
     assert.equal((await fetch(`${base}/v1/letters/${ID}`, as(billy))).status, 200);
     let shelf = await shelfOf(base, billy);
-    assert.deepEqual(shelf.sent.map(l => [l.id, l.opened, l.readable]), [[ID, false, false]]);
+    assert.deepEqual(shelf.sent.map(l => [l.id, l.opened, l.key]), [[ID, false, null]]);
     assert.deepEqual(shelf.opened, []);
     assert.equal((await fetch(`${base}/v1/shelf/${ID}`, { method: 'PUT', body: new Uint8Array([7, 7]), ...as(billy) })).status, 204);
 
@@ -142,7 +142,8 @@ test('shelves: sent and opened, own opens ignored, tap to re-read', async () => 
     assert.equal((await shelfOf(base, billy)).sent[0].opened, true);
     shelf = await shelfOf(base, bob);
     assert.deepEqual(shelf.sent, []);
-    assert.deepEqual(shelf.opened.map(l => [l.id, l.readable]), [[ID, false]]);
+    assert.deepEqual(shelf.opened.map(l => [l.id, l.key]), [[ID, null]]);
+    assert.equal((await shelfOf(base, billy)).sent[0].key, Buffer.from([7, 7]).toString('base64'));
 
     // re-reading needs the key on your shelf first
     assert.equal((await fetch(`${base}/v1/shelf/${ID}`, as(bob))).status, 404);
@@ -180,7 +181,7 @@ test('a new password clears locked keys and signs out everywhere', async () => {
     assert.equal((await fetch(`${base}/v1/session`, as(billy))).status, 401);
     assert.equal(await signInAs(base, 'billy', 'old'), 401);
     const again = await signInAs(base, 'billy', 'new');
-    assert.deepEqual((await shelfOf(base, again)).sent.map(l => l.readable), [false]);
+    assert.deepEqual((await shelfOf(base, again)).sent.map(l => l.key), [null]);
   }, db);
 });
 
@@ -195,7 +196,7 @@ test('backfill puts old letters on both shelves, once', async () => {
   assert.throws(() => backfill(db, [{ ...entries[0], sender: 'carol' }]), /carol/);
   await withServer(async base => {
     const billy = await signInAs(base, 'billy', 'pw one'), bob = await signInAs(base, 'bob', 'pw two');
-    assert.deepEqual((await shelfOf(base, billy)).sent.map(l => [l.id, l.sealed_at, l.opened, l.readable]), [[ID, 1000, true, false]]);
+    assert.deepEqual((await shelfOf(base, billy)).sent.map(l => [l.id, l.sealed_at, l.opened, l.key]), [[ID, 1000, true, null]]);
     assert.deepEqual((await shelfOf(base, bob)).opened.map(l => [l.id, l.first_at]), [[ID, 5000]]);
   }, db);
 });

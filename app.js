@@ -8,6 +8,8 @@ import { createScene, envelopeCanvas, scissorsCanvas, patternURL, ENV_W, ENV_H, 
 import { openLetter } from './store.js';
 import { demoLetter } from './demo.js';
 import { invitePopup } from './invite.js';
+import { authHeaders, shelve, reread } from './account.js';
+import { mountAccount } from './shelf.js';
 
 const $ = id => document.getElementById(id);
 const stage = $('stage'), contents = $('contents'), wrap = $('envWrap');
@@ -20,6 +22,10 @@ const scene = createScene($('scene'));
 
 let phase = 'greet';   // greet → fly → cut → opening → preview → read
 let letter = null;
+let busy = false;      // a letter is being looked up or handed over
+let arrived;
+const arrival = new Promise(resolve => { arrived = resolve; });   // the postman is at the door, talking
+const account = mountAccount(stage, { onRead: readFromShelf });
 
 // ---------- the postman talks ----------
 
@@ -40,47 +46,96 @@ $('dialog').addEventListener('click', e => { if (!e.target.closest('form')) skip
 async function tapToContinue() {
   $('more').hidden = false;
   await wait(0);   // so the tap that skipped the typing doesn't also count as this one
-  return new Promise(resolve => stage.addEventListener('click', () => { $('more').hidden = true; resolve(); }, { once: true }));
+  return new Promise(resolve => {
+    const onTap = e => {
+      if (e.target.closest('.modal, .account-button')) return;   // that was the account panel, not the postman
+      stage.removeEventListener('click', onTap);
+      $('more').hidden = true;
+      resolve();
+    };
+    stage.addEventListener('click', onTap);
+  });
 }
 
 async function greet() {
   scene.start();
   await invitePopup();   // temporary; the postman waits until it's closed
+  account.refresh();     // the invite may have signed someone in
   await scene.walkIn(reduce ? 0 : 4800);
   await wait(250);
   $('dialog').hidden = false;
+  arrived();
+  // Came from "my letters" on the creator page: hand that one over straight away.
+  const fromShelf = /^#read=([0-9a-f]{32})$/.exec(location.hash)?.[1];
+  if (fromShelf) {
+    history.replaceState(null, '', location.pathname + location.search);
+    return readFromShelf(fromShelf);
+  }
+  if (busy) return;
   await say('hey, you have a letter!');
+  if (busy) return;
   await tapToContinue();
+  if (busy) return;   // a letter from the shelf got there first
   await say('can i confirm some details first?');
+  if (busy) return;
   $('details').hidden = false;
   if (matchMedia('(pointer: fine)').matches) $('sender').focus();
 }
 
+// The postman hands over a letter: it flies to you, everything else fades.
+async function deliver(found, line) {
+  letter = found;
+  $('details').hidden = true;
+  $('more').hidden = true;
+  $('writeLink').hidden = true;
+  account.hide();
+  scene.holdLetter();
+  await say(line);
+  await wait(900);
+  $('dialog').hidden = true;
+  handOff();
+}
+
 $('details').addEventListener('submit', async e => {
   e.preventDefault();
+  if (busy) return;
   const sender = $('sender').value, password = $('password').value;
   if (!sender.trim()) return say("who's it from? i need a name.");
   if (!password.trim()) return say('and the password?');
+  busy = true;
   for (const el of $('details').elements) el.disabled = true;
   document.activeElement?.blur();
   say('one sec, let me check my bag…');
-  const lookup = Promise.resolve(demoLetter(sender, password) ?? openLetter(sender, password)).catch(() => 'closed');
+  const demo = demoLetter(sender, password);
+  const lookup = (demo ? Promise.resolve({ letter: demo }) : openLetter(sender, password, authHeaders())).catch(() => 'closed');
   const [found] = await Promise.all([lookup, wait(1100)]);
   if (!found || found === 'closed') {
+    busy = false;
     for (const el of $('details').elements) el.disabled = false;
     return say(found === 'closed'
       ? "oh no, i can't reach the post office right now. try again in a bit?"
       : `hmm… nothing from "${sender.trim()}" with that password. try again?`);
   }
-  letter = found;
-  $('details').hidden = true;
-  $('writeLink').hidden = true;
-  scene.holdLetter();
-  await say('here you go ♥');
-  await wait(900);
-  $('dialog').hidden = true;
-  handOff();
+  shelve(found.id, found.keyBytes, found.letter);   // signed in: keep it on your shelf (does nothing otherwise)
+  deliver(found.letter, 'here you go ♥');
 });
+
+// Tapped in "my letters": no name or password needed.
+async function readFromShelf(id) {
+  if (busy || phase !== 'greet') return;
+  busy = true;
+  await arrival;
+  $('details').hidden = true;
+  say('oh, welcome back! let me find that one…');
+  const [found] = await Promise.all([reread(id).catch(() => null), wait(1100)]);
+  if (!found) {
+    busy = false;
+    $('details').hidden = false;
+    for (const el of $('details').elements) el.disabled = false;
+    return say("hmm, i couldn't find that one. do you have its password?");
+  }
+  deliver(found, 'here it is ♥');
+}
 
 // ---------- the envelope flies to you ----------
 

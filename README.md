@@ -16,6 +16,7 @@ The sample letter is from **billy**, password **hello** (it's built into the pag
 
 ```
 index.html, app.js   reading a letter: postman → envelope → cut → read
+account.js, shelf.js signing in, "my letters", re-reading (invite.js: temporary invite pop-up)
 scene.js             all the pixel art, drawn in code (street, postman, envelope)
 store.js             seal / open letters: encrypts in the browser, talks to the post office
 demo.js              the sample letter
@@ -39,6 +40,19 @@ The post office is one SQLite table, `letters (id, blob, sealed_at)`, in `~/.lov
 Only the site's own pages may call it from a browser (`https://adgnvtefc.github.io` and localhost:4180; add more with `LOVELETTER_ORIGINS`). Reads are limited to 240 a minute to slow down password guessing. A short password is still guessable, so pick a real one for real letters.
 
 Pages on localhost use the local post office. The published site uses `https://hanmos-mac-studio.tail6c4683.ts.net/loveletter` (Tailscale Funnel → 127.0.0.1:8792).
+
+## Accounts
+
+Optional and invite-only: the **sign in** button (top left) shows the letters you sealed and opened while signed in, and opens any of them again without its password. Details in [docs/accounts-plan.md](docs/accounts-plan.md). On the Mac:
+
+```sh
+node server/accounts.js add <name>        # make an account (asks for its password)
+node server/accounts.js password <name>   # new password, signs out everywhere
+node server/accounts.js invite <name>     # let them make their own from the site, once
+node server/accounts.js list
+```
+
+For testing on localhost, `?office=<port>` points the pages at a throwaway post office (`LOVELETTER_HOME=<folder> PORT=<port> npm run server`), so the real one is never touched.
 
 ## Stats
 

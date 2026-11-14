@@ -3,12 +3,16 @@
 import { sealLetter, normalize } from '../store.js';
 import { DEMO } from '../demo.js';
 import { envelopeCanvas, patternURL } from '../scene.js';
+import { authHeaders, shelve, signedInAs } from '../account.js';
+import { mountAccount } from '../shelf.js';
 
 const $ = id => document.getElementById(id);
 const MAX_PHOTOS = 4;
 let photos = [];   // data URLs, already shrunk
 
 document.body.style.background = `url(${patternURL()}) repeat, var(--bg)`;
+// Re-reading happens on the front page, where the postman hands it over.
+mountAccount(document.body, { onRead: id => { location.href = new URL(`../${location.search}#read=${id}`, location).href; } });
 $('logo').append(envelopeCanvas());
 $('sealedEnv').append(envelopeCanvas());
 
@@ -110,7 +114,9 @@ $('write').addEventListener('submit', async e => {
   showError('');
   $('seal').disabled = true;
   $('seal').textContent = 'sealing…';
-  const result = await sealLetter({ sender, password, message, photos }).catch(() => 'closed');
+  const sealed = await sealLetter({ sender, password, message, photos }, authHeaders()).catch(() => ({ status: 'closed' }));
+  const result = sealed.status;
+  if (result === 'ok') await shelve(sealed.id, sealed.keyBytes, { sender, message, photos });   // signed in: onto your shelf
   $('seal').disabled = false;
   $('seal').textContent = 'seal it ♥';
   const problem = {
@@ -127,6 +133,7 @@ $('write').addEventListener('submit', async e => {
   $('link').href = url; $('link').textContent = url;
   $('outSender').textContent = sender;
   $('outPassword').textContent = password;
+  $('onShelf').hidden = !signedInAs();
   $('write').hidden = true;
   $('sealed').hidden = false;
   scrollTo(0, 0);

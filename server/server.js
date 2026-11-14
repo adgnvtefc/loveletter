@@ -11,9 +11,10 @@
 //   POST   /v1/session        {name, secret} → {token, name}, or 401
 //   GET    /v1/session        → {name}, or 401 (is this token still good?)
 //   DELETE /v1/session        → 204 signed out
-//   GET    /v1/shelf          → {sent: [...], opened: [...]}
+//   GET    /v1/shelf          → {name, sent: [...], opened: [...]}, each with its locked key + peek (or null)
 //   GET    /v1/shelf/<id>     → {letter, key}: the bytes and the key locked by your keyring, or 404
-//   PUT    /v1/shelf/<id>     body = the letter's key, locked by your keyring → 204, or 404 if not on your shelf
+//   PUT    /v1/shelf/<id>     body = the letter's key and a peek (from, first line), locked by your keyring
+//                             → 204, or 404 if not on your shelf
 //   GET    /v1/invites        → {open}: is anyone invited to make their own account? (never says who)
 //   POST   /v1/invites        {name, secret} → {token, name} for the new account, or 403 if not invited
 // Sealing while signed in puts the letter on your "sent" shelf; opening it on your "opened" one.
@@ -98,9 +99,9 @@ export function createPostOffice({ db, now = Date.now, report = () => {} }) {
     setKey: db.prepare('UPDATE shelf SET locked_key = ? WHERE account_id = ? AND letter_id = ?'),
     key: db.prepare(`SELECT role, locked_key FROM shelf WHERE account_id = ? AND letter_id = ? AND locked_key IS NOT NULL
       ORDER BY role = 'sent' DESC LIMIT 1`),
-    sent: db.prepare(`SELECT l.id, l.sealed_at, l.first_opened_at IS NOT NULL AS opened, s.locked_key IS NOT NULL AS readable
+    sent: db.prepare(`SELECT l.id, l.sealed_at, l.first_opened_at IS NOT NULL AS opened, s.locked_key AS key
       FROM shelf s JOIN letters l ON l.id = s.letter_id WHERE s.account_id = ? AND s.role = 'sent' ORDER BY l.sealed_at DESC`),
-    opened: db.prepare(`SELECT l.id, l.sealed_at, s.first_at, s.last_at, s.locked_key IS NOT NULL AS readable
+    opened: db.prepare(`SELECT l.id, l.sealed_at, s.first_at, s.last_at, s.locked_key AS key
       FROM shelf s JOIN letters l ON l.id = s.letter_id WHERE s.account_id = ? AND s.role = 'opened' ORDER BY s.first_at DESC`),
   };
   const canRead = limiter(240, 60_000);         // slows down anyone guessing passwords
@@ -158,14 +159,15 @@ export function createPostOffice({ db, now = Date.now, report = () => {} }) {
     if (pathname === '/v1/shelf') {
       if (method !== 'GET') return done(405);
       if (!me) return done(401);
-      const flags = r => ({ ...r, readable: !!r.readable, ...('opened' in r && { opened: !!r.opened }) });
+      // `key` is the locked key + peek (only your browser can unlock it); null until you've opened it signed in.
+      const flags = r => ({ ...r, key: r.key && Buffer.from(r.key).toString('base64'), ...('opened' in r && { opened: !!r.opened }) });
       return json(200, { name: me.name, sent: q.sent.all(me.id).map(flags), opened: q.opened.all(me.id).map(flags) });
     }
     const shelfId = SHELF_ITEM.exec(pathname)?.[1];
     if (shelfId) {
       if (!me) return done(401);
       if (method === 'PUT') {
-        const body = await readBody(req, res, 256);
+        const body = await readBody(req, res, 2048);
         if (!body) return;
         if (!body.length) return done(400);
         return done(q.setKey.run(body, me.id, shelfId).changes ? 204 : 404);
