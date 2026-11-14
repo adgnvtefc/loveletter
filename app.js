@@ -26,9 +26,33 @@ let busy = false;      // a letter is being looked up or handed over
 let replay = '';       // how "read again" reopens this letter: '#open=…' or '#read=…'
 
 // Opened from a link? Take the key out of the address bar right away, so it stays out of history.
+// '#home' (from "back to home") means: the postman waits at the gate until he's summoned.
 const link = readLink(location.hash);
 const fromShelfLink = /^#read=([0-9a-f]{32})$/.exec(location.hash)?.[1];
-if (link || fromShelfLink) history.replaceState(null, '', location.pathname + location.search);
+const atHome = location.hash === '#home';
+if (link || fromShelfLink || atHome) history.replaceState(null, '', location.pathname + location.search);
+
+// ---------- home: the postman waits at the gate ----------
+
+let summonNow = () => {};
+function placeSummon() {
+  const top = scene.postmanTop();
+  if (top) Object.assign($('summon').style, { left: `${top.x}px`, top: `${top.y}px` });
+}
+function waitForSummon() {
+  $('summon').hidden = false;
+  placeSummon();
+  addEventListener('resize', placeSummon);
+  return new Promise(resolve => {
+    summonNow = () => {
+      $('summon').hidden = true;
+      removeEventListener('resize', placeSummon);
+      summonNow = () => {};
+      resolve();
+    };
+    $('summon').addEventListener('click', () => summonNow(), { once: true });
+  });
+}
 let arrived;
 const arrival = new Promise(resolve => { arrived = resolve; });   // the postman is at the door, talking
 const account = mountAccount(stage, { onRead: readFromShelf });
@@ -65,8 +89,9 @@ async function tapToContinue() {
 
 async function greet() {
   scene.start();
-  await invitePopup();   // temporary; the postman waits until it's closed
+  await invitePopup();   // only while someone is invited; the postman waits until it's closed
   account.refresh();     // the invite may have signed someone in
+  if (atHome) await waitForSummon();
   await scene.walkIn(reduce ? 0 : 4800);
   await wait(250);
   $('dialog').hidden = false;
@@ -146,6 +171,7 @@ async function readFromLink({ id, keyBytes, token }) {
 async function readFromShelf(id) {
   if (busy || phase !== 'greet') return;
   busy = true;
+  summonNow();   // at home: tapping a letter in "my letters" calls the postman over
   await arrival;
   $('details').hidden = true;
   say('oh, welcome back! let me find that one…');
@@ -363,6 +389,11 @@ function showLetter() {
 // Read again: the postman brings the same letter, opened the same way (no password again for links and shelves).
 $('again').addEventListener('click', () => {
   if (replay) history.replaceState(null, '', location.pathname + location.search + replay);
+  location.reload();
+});
+// Back to home: the page starts over with the postman waiting at the gate.
+$('home').addEventListener('click', () => {
+  history.replaceState(null, '', location.pathname + location.search + '#home');
   location.reload();
 });
 $('lightbox').addEventListener('click', () => { $('lightbox').hidden = true; });

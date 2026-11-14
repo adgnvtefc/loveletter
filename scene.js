@@ -472,6 +472,12 @@ export function createScene(canvas) {
     },
     holdLetter() { st.holding = true; st.hopT = performance.now(); },
     hideLetter() { st.envGone = true; },
+    // Where the top of the postman's cap is, in CSS pixels relative to the canvas (for the summon button).
+    postmanTop() {
+      if (!f) return null;
+      const [sx, sy] = project(0, 0, st.z), u = POSTMAN_M / SPRITE_H * f / st.z;
+      return { x: sx * scale, y: (sy - SPRITE_H * u) * scale };
+    },
     // The held letter's box in CSS pixels, relative to the canvas, for the hand-off.
     letterRect() { const r = envRect(); return { left: r.x * scale, top: r.y * scale, width: r.w * scale, height: r.h * scale }; },
   };

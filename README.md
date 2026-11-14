@@ -16,7 +16,7 @@ The sample letter is from **billy**, password **hello** (it's built into the pag
 
 ```
 index.html, app.js   reading a letter: postman → envelope → cut → read
-account.js, shelf.js signing in, "my letters", re-reading (invite.js: temporary invite pop-up)
+account.js, shelf.js signing in, "my letters", re-reading (invite.js: the invite pop-up)
 scene.js             all the pixel art, drawn in code (street, postman, envelope)
 store.js             seal / open letters: encrypts in the browser, talks to the post office
 demo.js              the sample letter
@@ -43,7 +43,11 @@ Pages on localhost use the local post office. The published site uses `https://h
 
 ## Links
 
-After sealing, **send link ✉** shares a link that opens the letter straight away: the postman hands it over without asking for the name or password. The link carries the letter's id and key after the `#` (`…/loveletter/#open=<64 characters>`), never its name or password. Browsers never send the part after `#` anywhere, and the page removes it from the address bar as soon as it's read. Anyone with the link can open the letter, just like anyone with its name + password.
+After sealing, **send ✉** shares one message (the share sheet on phones, copied elsewhere) with a link and the username + password. The link opens the letter straight away: the postman hands it over without asking for anything. The link carries the letter's id and key after the `#` (`…/loveletter/#open=<64 characters>`), never its name or password. Browsers never send the part after `#` anywhere, and the page removes it from the address bar as soon as it's read. Anyone with the link can open the letter, just like anyone with its name + password.
+
+## Home
+
+After reading, **back to home** shows the yard with the postman waiting at the gate; **summon postman** (above his head) calls him over. Tapping a letter in "my letters" calls him too.
 
 ## Accounts
 
@@ -52,7 +56,8 @@ Optional and invite-only: the **sign in** button (top left) shows the letters yo
 ```sh
 node server/accounts.js add <name>        # make an account (asks for its password)
 node server/accounts.js password <name>   # new password, signs out everywhere
-node server/accounts.js invite <name>     # let them make their own from the site, once
+node server/accounts.js invite <name>     # let them make their own from the site, once (the pop-up shows while anyone is invited)
+node server/accounts.js uninvite <name>
 node server/accounts.js list
 ```
 

@@ -15,6 +15,7 @@
   <main id="stage" class="stage">
     <canvas id="scene" class="scene" aria-hidden="true"></canvas>
     <a id="writeLink" class="write-link" href="creator/">✎ write a letter</a>
+    <button id="summon" class="summon" type="button" hidden>summon postman<span aria-hidden="true">▼</span></button>
 
     <section id="dialog" class="dialog box" aria-live="polite" hidden>
       <span class="nametag">postman</span>
@@ -47,12 +48,13 @@
         <p>♥ the end ♥</p>
         <a class="btn" href="creator/">write one back ✎</a>
         <button id="again" class="btn ghost" type="button">read again</button>
+        <button id="home" class="btn ghost" type="button">back to home</button>
       </footer>
     </section>
 
     <div id="lightbox" class="lightbox" role="dialog" aria-label="photo" hidden><img id="lightboxImg" alt=""></div>
 
-    <!-- temporary: see invite.js -->
+    <!-- shows only while someone is invited: see invite.js -->
     <section id="invite" class="invite" role="dialog" aria-label="make your account" hidden>
       <form id="inviteForm" class="box invite-card" autocomplete="off">
         <button id="inviteClose" class="invite-close" type="button" aria-label="close">×</button>

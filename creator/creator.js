@@ -129,35 +129,27 @@ $('write').addEventListener('submit', async e => {
   }[result];
   if (problem) return showError(problem);
 
-  const url = new URL('../', location).href;
-  sealedLink = letterLink(new URL(`../${location.search}`, location).href, sealed.id, sealed.keyBytes);
-  $('link').href = url; $('link').textContent = url;
-  $('outSender').textContent = sender;
-  $('outPassword').textContent = password;
+  const link = letterLink(new URL(`../${location.search}`, location).href, sealed.id, sealed.keyBytes);
+  $('sendText').textContent = 'Hi! You have a letter! You can click on the link to view, or enter the username and password.'
+    + `\n\n${link}\n\nusername: ${sender}\npassword: ${password}`;
   $('onShelf').hidden = !signedInAs();
   $('write').hidden = true;
   $('sealed').hidden = false;
   scrollTo(0, 0);
 });
 
-// The link opens the letter with no name or password (its key rides after the #, which browsers never send).
-// On phones this opens the share sheet; elsewhere it copies the link.
-let sealedLink = '';
-$('sendLink').addEventListener('click', async () => {
-  const label = text => { $('sendLink').textContent = text; setTimeout(() => { $('sendLink').textContent = 'send link ✉'; }, 1600); };
+// The message: the link opens the letter with no name or password (its key rides after the #,
+// which browsers never send); the username + password open it through the postman instead.
+// On phones, send opens the share sheet; elsewhere it copies the message.
+$('send').addEventListener('click', async () => {
+  const text = $('sendText').textContent;
+  const label = t => { $('send').textContent = t; setTimeout(() => { $('send').textContent = 'send ✉'; }, 1600); };
   if (navigator.share && matchMedia('(pointer: coarse)').matches) {
-    try { await navigator.share({ text: 'you have a letter ✉', url: sealedLink }); return; }
+    try { await navigator.share({ text }); return; }
     catch (err) { if (err.name === 'AbortError') return; }   // closed the share sheet
   }
-  try { await navigator.clipboard.writeText(sealedLink); label('link copied ♥'); }
+  try { await navigator.clipboard.writeText(text); label('copied ♥'); }
   catch { label("couldn't copy"); }
-});
-
-$('copy').addEventListener('click', async () => {
-  const text = `you have a letter ✉\n${$('link').href}\nfrom: ${$('outSender').textContent}\npassword: ${$('outPassword').textContent}`;
-  try { await navigator.clipboard.writeText(text); $('copy').textContent = 'copied ♥'; }
-  catch { $('copy').textContent = "couldn't copy"; }
-  setTimeout(() => { $('copy').textContent = 'copy all'; }, 1600);
 });
 
 $('another').addEventListener('click', () => {

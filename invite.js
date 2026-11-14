@@ -1,8 +1,6 @@
-// invite.js: a temporary pop-up that lets an invited person make their own account,
-// choosing a password nobody else ever sees. It only shows while the post office says
-// someone is invited (`node server/accounts.js invite <name>`), and never says who.
-// To retire it: delete this file, its <section id="invite"> in index.html, and the
-// invitePopup() call in app.js.
+// invite.js: the pop-up that lets an invited person make their own account, choosing a
+// password nobody else ever sees. It only shows while the post office says someone is
+// invited (`node server/accounts.js invite <name>` on the Mac), and never says who.
 
 import { invitesOpen, claimInvite } from './account.js';
 
