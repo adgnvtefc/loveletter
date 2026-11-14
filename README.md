@@ -41,6 +41,10 @@ Only the site's own pages may call it from a browser (`https://adgnvtefc.github.
 
 Pages on localhost use the local post office. The published site uses `https://hanmos-mac-studio.tail6c4683.ts.net/loveletter` (Tailscale Funnel → 127.0.0.1:8792).
 
+## Links
+
+After sealing, **send link ✉** shares a link that opens the letter straight away: the postman hands it over without asking for the name or password. The link carries the letter's id and key after the `#` (`…/loveletter/#open=<64 characters>`), never its name or password. Browsers never send the part after `#` anywhere, and the page removes it from the address bar as soon as it's read. Anyone with the link can open the letter, just like anyone with its name + password.
+
 ## Accounts
 
 Optional and invite-only: the **sign in** button (top left) shows the letters you sealed and opened while signed in, and opens any of them again without its password. Details in [docs/accounts-plan.md](docs/accounts-plan.md). On the Mac:

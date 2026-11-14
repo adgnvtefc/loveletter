@@ -5,7 +5,7 @@
 //   4. swipe up to read
 
 import { createScene, envelopeCanvas, scissorsCanvas, patternURL, ENV_W, ENV_H, CUT_ROW } from './scene.js';
-import { openLetter } from './store.js';
+import { openLetter, openWithKey, readLink, letterLink } from './store.js';
 import { demoLetter } from './demo.js';
 import { invitePopup } from './invite.js';
 import { authHeaders, shelve, reread } from './account.js';
@@ -23,6 +23,12 @@ const scene = createScene($('scene'));
 let phase = 'greet';   // greet → fly → cut → opening → preview → read
 let letter = null;
 let busy = false;      // a letter is being looked up or handed over
+let replay = '';       // how "read again" reopens this letter: '#open=…' or '#read=…'
+
+// Opened from a link? Take the key out of the address bar right away, so it stays out of history.
+const link = readLink(location.hash);
+const fromShelfLink = /^#read=([0-9a-f]{32})$/.exec(location.hash)?.[1];
+if (link || fromShelfLink) history.replaceState(null, '', location.pathname + location.search);
 let arrived;
 const arrival = new Promise(resolve => { arrived = resolve; });   // the postman is at the door, talking
 const account = mountAccount(stage, { onRead: readFromShelf });
@@ -65,12 +71,9 @@ async function greet() {
   await wait(250);
   $('dialog').hidden = false;
   arrived();
+  if (link) return readFromLink(link);
   // Came from "my letters" on the creator page: hand that one over straight away.
-  const fromShelf = /^#read=([0-9a-f]{32})$/.exec(location.hash)?.[1];
-  if (fromShelf) {
-    history.replaceState(null, '', location.pathname + location.search);
-    return readFromShelf(fromShelf);
-  }
+  if (fromShelfLink) return readFromShelf(fromShelfLink);
   if (busy) return;
   await say('hey, you have a letter!');
   if (busy) return;
@@ -117,10 +120,29 @@ $('details').addEventListener('submit', async e => {
       : `hmm… nothing from "${sender.trim()}" with that password. try again?`);
   }
   shelve(found.id, found.keyBytes, found.letter);   // signed in: keep it on your shelf (does nothing otherwise)
+  if (found.id) replay = letterLink('', found.id, found.keyBytes);   // read again without retyping
   deliver(found.letter, 'here you go ♥');
 });
 
 // Tapped in "my letters": no name or password needed.
+// Opened from a link: no questions, the postman just hands it over.
+async function readFromLink({ id, keyBytes, token }) {
+  busy = true;
+  await say('hey, you have a letter!');
+  const [found] = await Promise.all([openWithKey(id, keyBytes, authHeaders()).catch(() => 'closed'), wait(900)]);
+  if (!found || found === 'closed') {
+    busy = false;
+    await say(found === 'closed'
+      ? "oh no, i can't reach the post office right now. try again in a bit?"
+      : "hmm, i can't find a letter for this link. do you have its name and password?");
+    $('details').hidden = false;
+    return;
+  }
+  replay = `#open=${token}`;
+  shelve(found.id, found.keyBytes, found.letter);   // signed in: keep it on your shelf
+  deliver(found.letter, 'here you go ♥');
+}
+
 async function readFromShelf(id) {
   if (busy || phase !== 'greet') return;
   busy = true;
@@ -134,6 +156,7 @@ async function readFromShelf(id) {
     for (const el of $('details').elements) el.disabled = false;
     return say("hmm, i couldn't find that one. do you have its password?");
   }
+  replay = `#read=${id}`;
   deliver(found, 'here it is ♥');
 }
 
@@ -337,7 +360,11 @@ function showLetter() {
   $('sig').textContent = letter.sender;
 }
 
-$('again').addEventListener('click', () => location.reload());
+// Read again: the postman brings the same letter, opened the same way (no password again for links and shelves).
+$('again').addEventListener('click', () => {
+  if (replay) history.replaceState(null, '', location.pathname + location.search + replay);
+  location.reload();
+});
 $('lightbox').addEventListener('click', () => { $('lightbox').hidden = true; });
 
 greet();

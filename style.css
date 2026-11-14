@@ -201,6 +201,7 @@ textarea {
 .sealed { text-align: center; justify-items: center; }
 .sealed h2 { margin: 0; font-size: 28px; }
 .sealed p { margin: 0; }
+.sealed .or { margin-top: 8px; }
 .sealed dl { display: grid; grid-template-columns: auto auto; gap: 6px 14px; margin: 0; text-align: left; }
 .sealed dt { color: var(--soft); }
 .sealed dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }

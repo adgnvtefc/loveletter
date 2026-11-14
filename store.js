@@ -59,6 +59,33 @@ export async function sealLetter({ sender, password, message, photos }, headers 
 // `headers` carries a sign-in, if any, so the post office can put it on your shelf.
 export async function openLetter(sender, password, headers = {}) {
   const { id, keyBytes } = await derive(sender, password);
+  return openWithKey(id, keyBytes, headers);
+}
+
+// ---------- links ----------
+// A link carries the letter's id and key (not its name or password) after the #, which
+// browsers never send anywhere: not to GitHub, not to link-preview servers. 48 bytes → 64 characters.
+
+const toB64url = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const fromB64url = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+
+export function letterLink(base, id, keyBytes) {
+  const token = new Uint8Array(48);
+  token.set(id.match(/../g).map(h => parseInt(h, 16)));
+  token.set(keyBytes, 16);
+  return `${base}#open=${toB64url(token)}`;
+}
+
+// '#open=…' → { id, keyBytes, token }, or null
+export function readLink(hash) {
+  const token = /^#open=([A-Za-z0-9_-]{64})$/.exec(hash)?.[1];
+  if (!token) return null;
+  const bytes = fromB64url(token);
+  return { id: [...bytes.slice(0, 16)].map(b => b.toString(16).padStart(2, '0')).join(''), keyBytes: bytes.slice(16), token };
+}
+
+// Open a letter when you already have its id and key (from a link).
+export async function openWithKey(id, keyBytes, headers = {}) {
   const res = await fetch(`${POST_OFFICE}/v1/letters/${id}`, { headers });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`post office said ${res.status}`);

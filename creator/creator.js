@@ -1,6 +1,6 @@
 // creator.js: write a letter (name, password, photos, message) and seal it.
 
-import { sealLetter, normalize } from '../store.js';
+import { sealLetter, normalize, letterLink } from '../store.js';
 import { DEMO } from '../demo.js';
 import { envelopeCanvas, patternURL } from '../scene.js';
 import { authHeaders, shelve, signedInAs } from '../account.js';
@@ -130,6 +130,7 @@ $('write').addEventListener('submit', async e => {
   if (problem) return showError(problem);
 
   const url = new URL('../', location).href;
+  sealedLink = letterLink(new URL(`../${location.search}`, location).href, sealed.id, sealed.keyBytes);
   $('link').href = url; $('link').textContent = url;
   $('outSender').textContent = sender;
   $('outPassword').textContent = password;
@@ -137,6 +138,19 @@ $('write').addEventListener('submit', async e => {
   $('write').hidden = true;
   $('sealed').hidden = false;
   scrollTo(0, 0);
+});
+
+// The link opens the letter with no name or password (its key rides after the #, which browsers never send).
+// On phones this opens the share sheet; elsewhere it copies the link.
+let sealedLink = '';
+$('sendLink').addEventListener('click', async () => {
+  const label = text => { $('sendLink').textContent = text; setTimeout(() => { $('sendLink').textContent = 'send link ✉'; }, 1600); };
+  if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+    try { await navigator.share({ text: 'you have a letter ✉', url: sealedLink }); return; }
+    catch (err) { if (err.name === 'AbortError') return; }   // closed the share sheet
+  }
+  try { await navigator.clipboard.writeText(sealedLink); label('link copied ♥'); }
+  catch { label("couldn't copy"); }
 });
 
 $('copy').addEventListener('click', async () => {
