@@ -140,17 +140,14 @@ $('write').addEventListener('submit', async e => {
 
 // The message: the link opens the letter with no name or password (its key rides after the #,
 // which browsers never send); the "from" + password open it through the postman instead.
-// On phones, send opens the share sheet; elsewhere it copies the message.
-$('send').addEventListener('click', async () => {
-  const text = $('sendText').textContent;
-  const label = t => { $('send').textContent = t; setTimeout(() => { $('send').textContent = 'send ✉'; }, 1600); };
-  if (navigator.share && matchMedia('(pointer: coarse)').matches) {
-    try { await navigator.share({ text }); return; }
-    catch (err) { if (err.name === 'AbortError') return; }   // closed the share sheet
-  }
-  try { await navigator.clipboard.writeText(text); label('copied ♥'); }
-  catch { label("couldn't copy"); }
+$('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('sendText').textContent); $('copy').textContent = 'copied ♥'; }
+  catch { $('copy').textContent = "couldn't copy"; }
+  setTimeout(() => { $('copy').textContent = 'copy'; }, 1600);
 });
+
+// Back to home: the yard, with the postman waiting at the gate (keeps ?office= while testing locally).
+$('home').href = new URL(`../${location.search}#home`, location).href;
 
 $('another').addEventListener('click', () => {
   $('write').reset();

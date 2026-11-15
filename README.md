@@ -43,7 +43,7 @@ Pages on localhost use the local post office. The published site uses `https://h
 
 ## Links
 
-After sealing, **send ✉** shares one message (the share sheet on phones, copied elsewhere) with a link and the "from" + password. The link opens the letter straight away: the postman hands it over without asking for anything. The link carries the letter's id and key after the `#` (`…/loveletter/#open=<64 characters>`), never its name or password. Browsers never send the part after `#` anywhere, and the page removes it from the address bar as soon as it's read. Anyone with the link can open the letter, just like anyone with its name + password.
+After sealing, **copy** copies one message with a link and the "from" + password. The link opens the letter straight away: the postman hands it over without asking for anything. The link carries the letter's id and key after the `#` (`…/loveletter/#open=<64 characters>`), never its name or password. Browsers never send the part after `#` anywhere, and the page removes it from the address bar as soon as it's read. Anyone with the link can open the letter, just like anyone with its name + password.
 
 ## Home
 
